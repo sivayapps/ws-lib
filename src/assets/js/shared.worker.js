@@ -92,17 +92,6 @@ class SharedWorkerClient {
 }
 
 console.log(`SharedWorker started---`);
-// onconnect = function(e) {
-//   var port = e.ports[0];
-//
-//   connections.push(port);
-//   port.onmessage = function(e) {
-//     console.log(`SharedWorker onMessage---`);
-//     var workerResult = 'Result: ' + (e.data[0] * e.data[1]);
-//     port.postMessage(workerResult);
-//   }
-//
-// }
 onconnect = connectEvent => {
   clientIdGenerator++;
   console.log(`SharedWorker onConnect--- ${clientIdGenerator}`);
@@ -110,14 +99,6 @@ onconnect = connectEvent => {
   const wsChannel = new WebSocketMessageChannel(clientIdGenerator);
   const sharedWorkerClient = new SharedWorkerClient(port, clientIdGenerator, wsChannel);
   subscriptionRegistry.registerClient(sharedWorkerClient);
-  // connections.push(port);
   Comlink.expose(wsChannel, port);
-
-  // port.onmessage = messageEvent => {
-  //   console.log(`SharedWorker onMessage: ${messageEvent.data}`);
-  //   connections.forEach(connection => {
-  //     connection.postMessage(messageEvent.data);
-  //   });
-  // }
 }
 console.log(`SharedWorker Loaded---`);

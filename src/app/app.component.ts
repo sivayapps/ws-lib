@@ -25,13 +25,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.webSocketMessageChannel = wrap(this.sharedWorker.port);
     this.webSocketMessageChannel.subscribe("healthCheck", proxy((msg: string) => console.log(`Received callback with Msg: ${msg}`)));
-    this.webSocketMessageChannel.subscribe("r1", proxy((msg: string) => console.log(`Received callback with Msg: ${msg}`)));
-    this.webSocketMessageChannel.subscribe("r2", proxy((msg: string) => console.log(`Received callback with Msg: ${msg}`)));
-    this.webSocketMessageChannel.subscribe("t1", proxy((msg: string) => console.log(`Received callback with Msg: ${msg}`)));
-    // this.sharedWorker.port.onmessage = (event) => {
-    //   console.log(`page got shared worker message: ${event.data}`);
-    // };
-    // this.sharedWorker.port.start();
+
     setTimeout(() => {
       this.onTimeOut();
     }, 1000);
