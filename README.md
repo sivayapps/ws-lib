@@ -1,4 +1,11 @@
 # [In Development Not ready for use]
+
+Can be used as a reference for Sharedworker and Comlink with Angular 12.1
+
+Pending: It needs to be integrated with WebSockets
+
+As a sample code: Sharedworker interaction is written in Component instead of Service, it needs to be refactored(TODO).
+
 # WsLib
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.0.
