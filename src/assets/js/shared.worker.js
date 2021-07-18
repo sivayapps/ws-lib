@@ -1,7 +1,7 @@
 //shared-worker.worker.js
 //https://medium.com/@nsbarsukov/dedicated-and-shared-web-workers-in-angular-c3df473882f6
 importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
-
+initTime = new Date();
 clientIdGenerator = 0;
 class STOMPMessageChannel {
 
@@ -111,6 +111,10 @@ class WebSocketMessageChannel {
     subscriptionRegistry.closeClient(this.clientId)
   }
 
+  getInitTime() {
+    return initTime;
+  }
+
   //ping pong
 }
 
@@ -155,6 +159,7 @@ function getSubscriptionsAsString(obj) {
 
 function onTimeOut() {
   console.log(`All Subscriptions--- ${getSubscriptionsAsString(subscriptionRegistry.subscriptions)}`);
+  console.log(`UP Time: ${getUpTime()}`);
   console.log(`All Subscription Topics Count: ${subscriptionRegistry.subscriptions.size}, Clients Count: ${subscriptionRegistry.connections.size}`);
   // sendMessageToAllSubscribers({topicId: 'heartbeat', message: 'ping'});
   let msg = new Map();
@@ -172,4 +177,17 @@ function onTimeOut() {
 setTimeout(() => {
   onTimeOut();
 }, 3000);
+
+function getUpTime() {
+  let millis = new Date().getTime() - initTime.getTime();
+  let millisPerMinute = 60000;
+  let millisPerHour = millisPerMinute * 60;
+  let millisPerDay = millisPerHour * 24;
+  let days = Math.floor(millis/millisPerDay);
+  let hours = Math.floor((millis % millisPerDay)/millisPerHour);
+  let minutes = Math.floor((millis % millisPerHour)/millisPerMinute);
+  let seconds = Math.floor((millis % millisPerMinute)/1000);
+  return `${days >0?(days+'days '):''}${hours >0?(hours+' hours '):''}${minutes >0?(minutes+' minutes '):''}${seconds >0?(seconds+' seconds'):''}`;
+}
+
 console.log(`SharedWorker Loaded---`);

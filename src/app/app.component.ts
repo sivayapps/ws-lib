@@ -11,6 +11,8 @@ export class AppComponent implements OnInit, OnDestroy {
   title: string = 'ws-lib';
   topicId: string = "";
   clientId: string = "";
+  initTime: Date = new Date();
+  sharedWorkerInitTime: Date = new Date();
   lastHeartBeatReceiveTime: Date = new Date(0);
   lastHeartBeatSentTime: Date = new Date(0);
   sharedWorker!: SharedWorker;
@@ -40,6 +42,18 @@ export class AppComponent implements OnInit, OnDestroy {
     return Math.floor((new Date().getTime() - instantTime.getTime())/1000);
   }
 
+  getUpTime(initTime: Date) {
+    let millis = new Date().getTime() - initTime.getTime();
+    let millisPerMinute = 60000;
+    let millisPerHour = millisPerMinute * 60;
+    let millisPerDay = millisPerHour * 24;
+    let days = Math.floor(millis/millisPerDay);
+    let hours = Math.floor((millis % millisPerDay)/millisPerHour);
+    let minutes = Math.floor((millis % millisPerHour)/millisPerMinute);
+    let seconds = Math.floor((millis % millisPerMinute)/1000);
+    return `${days >0?(days+'days '):''}${hours >0?(hours+' hours '):''}${minutes >0?(minutes+' minutes '):''}${seconds >0?(seconds+' seconds'):''}`;
+  }
+
   ngOnInit(): void {
     console.log(`LifeCycle: ngOnInit.`);
     this.initSharedWorker();
@@ -50,6 +64,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private initSharedWorker() {
     console.log(`Initializing Shared Worker!`);
+    this.sharedWorkerInitTime = new Date();
     this.sharedWorker = new SharedWorker('../../assets/js/shared.worker.js', 'WS_SW');
     this.sharedWorker.onerror = function (event) {
       console.log(`THERE IS AN ERROR WITH YOUR WORKER! ${event}`);
@@ -85,6 +100,7 @@ export class AppComponent implements OnInit, OnDestroy {
     console.log(`Sending heartbeat: ${heartbeatMessage.data}`);
     await this.webSocketMessageChannel.sendMessage(heartbeatMessage);
     this.subscriptions = await this.webSocketMessageChannel.getAllClientSubscriptions();
+    this.sharedWorkerInitTime = await this.webSocketMessageChannel.getInitTime();
   }
 
   unSubscribe() {
@@ -109,6 +125,7 @@ interface WebSocketMessageChannel<T> {
   getAllClientSubscriptions(): Set<string>;
 
   close(): void;
+  getInitTime(): Date;
 }
 
 class WebSocketMessage<T> {
