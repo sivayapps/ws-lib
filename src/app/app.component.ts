@@ -11,8 +11,8 @@ export class AppComponent implements OnInit, OnDestroy {
   title: string = 'ws-lib';
   topicId: string = "";
   clientId: string = "";
-  lastMessageTime: Date = new Date(0);
-  lastMessageReceived:string = '';
+  lastHeartBeatReceiveTime: Date = new Date(0);
+  lastHeartBeatSentTime: Date = new Date(0);
   sharedWorker!: SharedWorker;
   subscriptions!: Set<string>;
   sharedWorkerState!: Map<string, string>;
@@ -26,43 +26,65 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     console.log(`LifeCycle: ngOnDestroy.`);
-    this.webSocketMessageChannel[releaseProxy]();
+    this.closeSharedWorker();
   }
 
-  getLAstMessageDuration() {
-    return `${ Math.floor((new Date().getTime() - this.lastMessageTime.getTime())/1000) } seconds ago`;
+  private closeSharedWorker() {
+    console.log(`try CLEANING(CLOSING) SHARED_WORKER!`);
+    this.webSocketMessageChannel[releaseProxy]();
+    this.sharedWorker.port.close();
+    console.log(`CLEANED(CLOSED) SHARED_WORKER!`);
+  }
+
+  getLastMessageDuration(instantTime:Date) {
+    return Math.floor((new Date().getTime() - instantTime.getTime())/1000);
   }
 
   ngOnInit(): void {
     console.log(`LifeCycle: ngOnInit.`);
-    this.sharedWorker = new SharedWorker('../../assets/js/shared.worker.js', 'WS_SW');
-    this.sharedWorker.onerror = function(event) {
-      console.log(`THERE IS AN ERROR WITH YOUR WORKER! ${event}`);
-    }
-    this.webSocketMessageChannel = wrap(this.sharedWorker.port);
-    this.lastMessageTime = new Date();
-    this.webSocketMessageChannel.clientId.then((value) => this.clientId = value);
-    this.webSocketMessageChannel.subscribe("healthCheck", proxy((msg: string) => {
-      this.lastMessageTime = new Date();
-      this.lastMessageReceived = this.getLAstMessageDuration();
-      console.log(`Received healthCheck callback with Msg: ${msg}`);
-    }));
-    this.webSocketMessageChannel.subscribe("message", proxy((msg: WebSocketMessage<Map<string, string>>) => {
-      this.sharedWorkerState = msg.data;
-      console.log(`Received MESSAGE callback with Msg: ${msg}`);
-    }));
-
+    this.initSharedWorker();
     setTimeout(() => {
       this.onTimeOut();
     }, 1000);
   }
 
+  private initSharedWorker() {
+    console.log(`Initializing Shared Worker!`);
+    this.sharedWorker = new SharedWorker('../../assets/js/shared.worker.js', 'WS_SW');
+    this.sharedWorker.onerror = function (event) {
+      console.log(`THERE IS AN ERROR WITH YOUR WORKER! ${event}`);
+    }
+    this.webSocketMessageChannel = wrap(this.sharedWorker.port);
+    this.lastHeartBeatReceiveTime = new Date();
+    this.webSocketMessageChannel.clientId.then((value) => this.clientId = value);
+    this.webSocketMessageChannel.subscribe("heartbeat", proxy((msg: WebSocketMessage<string>) => {
+      this.lastHeartBeatReceiveTime = new Date();
+      console.log(`Received  heartbeat: ${msg.data}, in ${this.lastHeartBeatReceiveTime.getTime() - msg.messageTime.getTime()} Millis.`);
+    }));
+    this.webSocketMessageChannel.subscribe("message", proxy((msg: WebSocketMessage<Map<string, string>>) => {
+      this.sharedWorkerState = msg.data;
+      console.log(`Received MESSAGE callback with Msg: ${JSON.stringify(msg.topicId)}, data: ${JSON.stringify(Array.from(msg.data.entries()))}`);
+    }));
+    console.log(`Initialized Shared Worker!`);
+  }
+
   async onTimeOut() {
-    await this.webSocketMessageChannel.sendMessage(new WebSocketMessage('healthCheck', 'ping', null));
-    this.subscriptions = await this.webSocketMessageChannel.getAllClientSubscriptions();
     setTimeout(() => {
       this.onTimeOut();
-    }, 30000);
+    }, 5000);
+    console.log(`ClientID: ${this.clientId} - lastHeartBeatSentTime: ${this.getLastMessageDuration(this.lastHeartBeatSentTime)}, lastHeartBeatReceiveTime: ${this.getLastMessageDuration(this.lastHeartBeatReceiveTime)}!`);
+    //sometimes non active tabs reloading sharedworker even when it's active, may be due to timer run delays(need further investigation), to identify timer delay, check last heartbeat sent time
+    if(this.getLastMessageDuration(this.lastHeartBeatReceiveTime) > 30 && this.getLastMessageDuration(this.lastHeartBeatSentTime) < 10) {
+      console.log(`RE_LOADING Shared Worker, as No HEARTBEAT Received from SHARED_WORKER since last 30 seconds!`);
+      this.closeSharedWorker();
+      this.initSharedWorker();
+      console.log(`RE_LOADED Shared Worker, as No HEARTBEAT Received from SHARED_WORKER since last 30 seconds!`);
+    }
+    this.lastHeartBeatSentTime = new Date();
+    let heartbeatMessage = new WebSocketMessage('heartbeat', 'ping', null, new Date());
+    console.log(`Sending heartbeat: ${heartbeatMessage.data}`);
+    await this.webSocketMessageChannel.sendMessage(heartbeatMessage);
+    this.subscriptions = await this.webSocketMessageChannel.getAllClientSubscriptions();
   }
 
   unSubscribe() {
@@ -93,11 +115,13 @@ class WebSocketMessage<T> {
   topicId: string;
   data: T;
   headers: Map<string, string> | undefined | null;
+  messageTime: Date = new Date();
 
-  constructor(topicId: string, data: T, headers: Map<string, string> | undefined | null) {
+  constructor(topicId: string, data: T, headers: Map<string, string> | undefined | null, messageTime: Date| undefined | null) {
     this.topicId = topicId;
     this.data = data;
     this.headers = headers;
+    this.messageTime = messageTime?messageTime:new Date();
   }
 }
 

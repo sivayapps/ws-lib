@@ -2,8 +2,10 @@
 <p></p>
 <span>My ID: {{clientId}}</span>
 <p></p>
-<div>Last Message Receive Time: {{lastMessageTime | date : 'mm-dd-yyyy hh:mm:ss'}}</div>
-<div>Last Message Received: {{getLAstMessageDuration()}}</div>
+<div>Last Message Sent Time: {{lastHeartBeatSentTime | date : 'mm-dd-yyyy hh:mm:ss'}}</div>
+<div>Last Message Receive Time: {{lastHeartBeatReceiveTime | date : 'mm-dd-yyyy hh:mm:ss'}}</div>
+<div>Last Message Sent: {{getLastMessageDuration(lastHeartBeatSentTime)}} seconds ago</div>
+<div>Last Message Received: {{getLastMessageDuration(lastHeartBeatReceiveTime)}} seconds ago</div>
 <p></p>
 <div class="example-button-row">
 <mat-form-field appearance="fill">

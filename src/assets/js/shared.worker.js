@@ -82,9 +82,9 @@ class WebSocketMessageChannel {
   }
 
   sendMessage(message) {
-    console.log(`SharedWorker sendMessage: ${JSON.stringify(message)}`);
-    if(message.topicId === 'healthCheck') {
-      subscriptionRegistry.subscriptions.get(message.topicId)?.get(this.clientId)?.callback({topicId: message.topicId, data: 'pong'});
+    console.log(`SharedWorker sendMessage: Client: ${this.clientId}, Msg: ${JSON.stringify(message)}`);
+    if(message.topicId === 'heartbeat') {
+      subscriptionRegistry.subscriptions.get(message.topicId)?.get(this.clientId)?.callback({...message, data: 'pong'});
     } else {
       sendMessageToAllSubscribers(message);
     }
@@ -156,7 +156,7 @@ function getSubscriptionsAsString(obj) {
 function onTimeOut() {
   console.log(`All Subscriptions--- ${getSubscriptionsAsString(subscriptionRegistry.subscriptions)}`);
   console.log(`All Subscription Topics Count: ${subscriptionRegistry.subscriptions.size}, Clients Count: ${subscriptionRegistry.connections.size}`);
-  // sendMessageToAllSubscribers({topicId: 'healthCheck', message: 'ping'});
+  // sendMessageToAllSubscribers({topicId: 'heartbeat', message: 'ping'});
   let msg = new Map();
   msg.set("topicCount", subscriptionRegistry.subscriptions.size);
   msg.set("clientCount", subscriptionRegistry.connections.size);
@@ -167,7 +167,7 @@ function onTimeOut() {
   sendMessageToAllSubscribers({topicId: 'message', data: msg});
   setTimeout(() => {
     onTimeOut();
-  }, 3000);
+  }, 30000);
 }
 setTimeout(() => {
   onTimeOut();
